@@ -1,0 +1,10 @@
+# 来自 Jupyter 官方文档
+**/.ipynb_checkpoints
+**/.jupyter
+**/jupyter_notebook_config.*
+**/runtime
+**/~$*.ipynb
+**/__pycache__
+
+# 可选：忽略所有 notebook（按需启用）
+# **/*.ipynb
