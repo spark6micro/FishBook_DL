@@ -72,7 +72,7 @@ class ISM_Model:
         # 添加边（基于原始邻接矩阵）
         for i in range(self.n):
             for j in range(self.n):
-                if self.adj_mat[i, j] == 1:
+                if self.adj_mat[i, j] == 1 and i != j:
                     G.add_edge(self.element_names[i], self.element_names[j])
         
         self.hierarchy_graph = G
@@ -143,6 +143,10 @@ class ISM_Model:
         
         G = self.hierarchy_graph
         
+        # 设置中文字体支持
+        plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'sans-serif']
+        plt.rcParams['axes.unicode_minus'] = False
+        
         # 创建布局 - 按层级排列节点
         pos = {}
         max_level = max(self.levels.keys())
@@ -152,16 +156,16 @@ class ISM_Model:
             # 反转层级：最顶层在y=0，最底层在y=max_level
             y = max_level - level
             
-            # 水平排列同一层级的节点
+            # 水平排列同一层级的节点，向右偏移以留出左侧空间
             num_nodes = len(elements)
             for i, elem_idx in enumerate(elements):
                 elem_name = self.element_names[elem_idx]
-                # 水平居中排列
-                x = (i - num_nodes/2) * 1.5
+                # 水平居中排列，但整体向右偏移
+                x = (i - num_nodes/2) * 1.5 + 4.0  # 向右偏移4个单位
                 pos[elem_name] = (x, y)
         
-        # 绘制图形
-        plt.figure(figsize=(10, 8))
+        # 绘制图形 - 增大宽度以容纳左侧文字
+        plt.figure(figsize=(14, 10))
         
         # 绘制节点
         node_colors = []
@@ -175,25 +179,27 @@ class ISM_Model:
             else:
                 node_colors.append('lightblue')   # 中间层 - 蓝色系
         
-        nx.draw_networkx_nodes(G, pos, node_size=2000, node_color=node_colors, alpha=0.8)
+        nx.draw_networkx_nodes(G, pos, node_size=2500, node_color=node_colors, alpha=0.8)
         
-        # 绘制边
+        # 绘制边 - 过滤掉自环边
+        edges_to_draw = [edge for edge in G.edges() if edge[0] != edge[1]]
         nx.draw_networkx_edges(
             G, pos, 
+            edgelist=edges_to_draw,  # 只绘制非自环边
             edge_color='gray', 
-            width=1.5, 
+            width=2, 
             arrowstyle='->', 
-            arrowsize=20
+            arrowsize=25
         )
         
         # 绘制节点标签
-        nx.draw_networkx_labels(G, pos, font_size=12, font_weight='bold')
+        nx.draw_networkx_labels(G, pos, font_size=14, font_weight='bold')
         
-        # 绘制边标签（显示关系）
+        # 绘制边标签（显示关系）- 过滤掉自环边
         edge_labels = {}
         for i in range(self.n):
             for j in range(self.n):
-                if self.adj_mat[i, j] == 1:
+                if self.adj_mat[i, j] == 1 and i != j:  # 跳过自环
                     source = self.element_names[i]
                     target = self.element_names[j]
                     edge_labels[(source, target)] = f"{source}→{target}"
@@ -202,21 +208,45 @@ class ISM_Model:
             G, pos, 
             edge_labels=edge_labels,
             font_color='darkred',
-            font_size=10
+            font_size=12
         )
         
-        # 添加层级说明
+        # 添加层级说明 - 使用中文，位于左侧
         for level in range(1, max_level + 1):
+            y_pos = max_level - level
             plt.text(
-                -5, max_level - level, 
+                -2.5, y_pos,  # 将层级文字放在左侧
                 f"层级 {level}", 
-                fontsize=12, 
+                fontsize=16, 
                 color='darkblue',
-                verticalalignment='center'
+                verticalalignment='center',
+                horizontalalignment='center',
+                weight='bold'
             )
         
-        plt.title("ISM 层级结构图", fontsize=16)
+        # 添加左上角的"ISM 解释结构模型"字样
+        plt.text(
+            0.02, 0.98,  # 左上角位置
+            "ISM 解释结构模型", 
+            fontsize=16, 
+            color='black',
+            horizontalalignment='left',
+            verticalalignment='top',
+            transform=plt.gca().transAxes,
+            weight='bold'
+        )
+        
+        # 添加标题
+        plt.title("ISM 层级结构图", fontsize=18, pad=20)
+        
+        # 设置坐标轴范围，确保左侧有足够空间显示文字
+        plt.xlim(-4, max([pos[node][0] for node in pos]) + 2)
+        plt.ylim(-1, max_level + 1)
+        
         plt.axis('off')
+        
+        # 调整布局
+        plt.tight_layout()
         
         if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
